@@ -1,10 +1,100 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useLocalStorage } from '../../../hooks/useLocalStorage';
-import { calculateSGPA, getSubjectTotalMarks, getGradeInfo } from '../../../lib/calculators';
-import styles from './semester.module.css';
+import { calculateSGPA } from '../../../lib/calculators';
+import { Button } from '../../../components/ui/button';
+import { SubjectCalculator, getGradeInfo } from '../../../components/SubjectCalculator';
+import { Plus, Save, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Card } from '../../../components/ui/card';
+
+// Create a new subject with default values
+const createNewSubject = (index) => ({
+  id: Date.now().toString(),
+  name: `Subject ${index}`,
+  courseType: 'theory',
+  credit: 3,
+  // Theory fields
+  quiz1: '',
+  quiz2: '',
+  quiz3: '',
+  midTerm: '',
+  finalExam: '',
+  presentation: '',
+  assignment: '',
+  attendance: '',
+  // Lab fields
+  labAttendance: '',
+  performance: '',
+  viva: '',
+  project: '',
+  labFinal: '',
+  // Override
+  overrideEnabled: false,
+  overrideBy: 'marks',
+  overrideMarks: '',
+  overrideGPA: '',
+});
+
+// Convert old subject format to new format
+const convertToNewFormat = (oldSubject) => {
+  // Check if it's already in new format
+  if (oldSubject.courseType !== undefined) {
+    return oldSubject;
+  }
+
+  return {
+    id: oldSubject.id || Date.now().toString(),
+    name: oldSubject.name || `Subject`,
+    courseType: oldSubject.type || 'theory',
+    credit: oldSubject.credit || 3,
+    quiz1: oldSubject.theory?.quiz1 || '',
+    quiz2: oldSubject.theory?.quiz2 || '',
+    quiz3: oldSubject.theory?.quiz3 || '',
+    midTerm: oldSubject.theory?.midterm || '',
+    finalExam: oldSubject.theory?.final || '',
+    presentation: oldSubject.theory?.presentation || '',
+    assignment: oldSubject.theory?.assignment || '',
+    attendance: oldSubject.theory?.attendance || '',
+    overrideEnabled: oldSubject.override || false,
+    overrideBy: 'marks',
+    overrideMarks: oldSubject.totalMarks || '',
+    overrideGPA: oldSubject.directGradePoint || '',
+  };
+};
+
+// Convert new format back to old format for SGPA calculation
+const convertToOldFormat = (newSubject) => {
+  const gradeInfo = getGradeInfo(0); // We'll calculate this properly
+  
+  return {
+    id: newSubject.id,
+    name: newSubject.name,
+    type: newSubject.courseType,
+    credit: newSubject.credit,
+    override: newSubject.overrideEnabled,
+    totalMarks: newSubject.overrideEnabled ? newSubject.overrideMarks : null,
+    directGradePoint: newSubject.overrideEnabled ? newSubject.overrideGPA : null,
+    theory: {
+      quiz1: newSubject.quiz1,
+      quiz2: newSubject.quiz2,
+      quiz3: newSubject.quiz3,
+      midterm: newSubject.midTerm,
+      final: newSubject.finalExam,
+      assignment: newSubject.assignment,
+      presentation: newSubject.presentation,
+      attendance: newSubject.attendance,
+    },
+    lab: oldSubject?.lab || {
+      attendance: '',
+      performance: '',
+      viva: '',
+      project: '',
+      final: '',
+    },
+  };
+};
 
 export default function SemesterPage() {
   const router = useRouter();
@@ -14,6 +104,7 @@ export default function SemesterPage() {
   const [semesters, setSemesters] = useLocalStorage('diu-semesters', []);
   const [semester, setSemester] = useState(null);
   const [semesterIndex, setSemesterIndex] = useState(-1);
+  const [subjects, setSubjects] = useState([]);
 
   useEffect(() => {
     if (semesters.length > 0) {
@@ -21,278 +112,190 @@ export default function SemesterPage() {
       if (idx !== -1) {
         setSemester(semesters[idx]);
         setSemesterIndex(idx);
+        // Convert subjects to new format
+        const convertedSubjects = semesters[idx].subjects.map((sub, i) => 
+          convertToNewFormat({ ...sub, index: i + 1 })
+        );
+        setSubjects(convertedSubjects);
       }
     }
   }, [id, semesters]);
 
-  if (!semester) {
-    return <div className="main-container">Loading...</div>;
-  }
+  // Calculate SGPA from subjects
+  const currentSgpa = useCallback(() => {
+    let totalQualityPoints = 0;
+    let totalCredits = 0;
+
+    subjects.forEach(sub => {
+      let totalMarks = 0;
+
+      if (sub.overrideEnabled && sub.overrideBy === 'marks' && sub.overrideMarks !== '') {
+        totalMarks = typeof sub.overrideMarks === 'number' ? sub.overrideMarks : 0;
+      } else if (sub.overrideEnabled && sub.overrideBy === 'gpa' && sub.overrideGPA !== '') {
+        const gpa = typeof sub.overrideGPA === 'number' ? sub.overrideGPA : 0;
+        totalMarks = (gpa / 4) * 100;
+      } else if (sub.courseType === 'lab') {
+        // Lab calculation: Attendance (10) + Performance (25) + Viva (10) + Project (25) + Final (30) = 100
+        const attend = typeof sub.labAttendance === 'number' ? sub.labAttendance : 0;
+        const perf = typeof sub.performance === 'number' ? sub.performance : 0;
+        const viva = typeof sub.viva === 'number' ? sub.viva : 0;
+        const proj = typeof sub.project === 'number' ? sub.project : 0;
+        const final = typeof sub.labFinal === 'number' ? sub.labFinal : 0;
+        totalMarks = Math.min(attend + perf + viva + proj + final, 100);
+      } else {
+        // Theory calculation
+        const quizAvg = (() => {
+          const q1 = typeof sub.quiz1 === 'number' ? sub.quiz1 : 0;
+          const q2 = typeof sub.quiz2 === 'number' ? sub.quiz2 : 0;
+          const q3 = typeof sub.quiz3 === 'number' ? sub.quiz3 : 0;
+          const filled = [sub.quiz1, sub.quiz2, sub.quiz3].filter(v => v !== '').length;
+          if (filled === 0) return 0;
+          return Math.min(((q1 + q2 + q3) / 3), 15);
+        })();
+
+        const mid = typeof sub.midTerm === 'number' ? sub.midTerm : 0;
+        const final = typeof sub.finalExam === 'number' ? sub.finalExam : 0;
+        const pres = typeof sub.presentation === 'number' ? sub.presentation : 0;
+        const assign = typeof sub.assignment === 'number' ? sub.assignment : 0;
+        const attend = typeof sub.attendance === 'number' ? sub.attendance : 0;
+        totalMarks = Math.min(quizAvg + mid + final + pres + assign + attend, 100);
+      }
+
+      const gradeInfo = getGradeInfo(totalMarks);
+      totalQualityPoints += sub.credit * gradeInfo.point;
+      totalCredits += sub.credit;
+    });
+
+    return totalCredits > 0 ? totalQualityPoints / totalCredits : 0;
+  }, [subjects]);
+
+  const currentCredits = subjects.reduce((sum, s) => sum + s.credit, 0);
 
   const addSubject = () => {
-    const newSubject = {
-      id: Date.now().toString(),
-      name: `Subject ${semester.subjects.length + 1}`,
-      credit: 3,
-      type: 'theory',
-      override: false,
-      totalMarks: null,
-      directGradePoint: null,
-      theory: {
-        quiz1: '', quiz2: '', quiz3: '', quizManualAvg: '',
-        midterm: '', final: '', assignment: '', presentation: '', attendance: '', attendancePercent: ''
-      },
-      lab: {
-        attendance: '', performance: '', viva: '', project: '', final: ''
-      }
-    };
-
-    const newSemester = { ...semester, subjects: [...semester.subjects, newSubject] };
-    setSemester(newSemester);
+    const newSubject = createNewSubject(subjects.length + 1);
+    const updatedSubjects = [...subjects, newSubject];
+    setSubjects(updatedSubjects);
+    // Auto-save to localStorage
+    const newSemesters = [...semesters];
+    newSemesters[semesterIndex] = { ...semester, subjects: updatedSubjects };
+    setSemesters(newSemesters);
   };
 
-  const updateSubject = (subId, field, value) => {
-    const newSubjects = semester.subjects.map(sub => {
-      if (sub.id === subId) {
-        return { ...sub, [field]: value };
-      }
-      return sub;
-    });
-    setSemester({ ...semester, subjects: newSubjects });
+  const updateSubject = (subjectId, updates) => {
+    const updatedSubjects = subjects.map(sub => 
+      sub.id === subjectId ? { ...sub, ...updates } : sub
+    );
+    setSubjects(updatedSubjects);
+    // Auto-save to localStorage
+    const newSemesters = [...semesters];
+    newSemesters[semesterIndex] = { ...semester, subjects: updatedSubjects };
+    setSemesters(newSemesters);
   };
 
-  const updateTheory = (subId, field, value) => {
-    const newSubjects = semester.subjects.map(sub => {
-      if (sub.id === subId) {
-        return { ...sub, theory: { ...sub.theory, [field]: value } };
-      }
-      return sub;
-    });
-    setSemester({ ...semester, subjects: newSubjects });
-  };
-
-  const updateLab = (subId, field, value) => {
-    const newSubjects = semester.subjects.map(sub => {
-      if (sub.id === subId) {
-        return { ...sub, lab: { ...sub.lab, [field]: value } };
-      }
-      return sub;
-    });
-    setSemester({ ...semester, subjects: newSubjects });
-  };
-
-  const removeSubject = (subId) => {
-    const newSubjects = semester.subjects.filter(s => s.id !== subId);
-    setSemester({ ...semester, subjects: newSubjects });
+  const removeSubject = (subjectId) => {
+    const updatedSubjects = subjects.filter(sub => sub.id !== subjectId);
+    setSubjects(updatedSubjects);
+    // Auto-save to localStorage
+    const newSemesters = [...semesters];
+    newSemesters[semesterIndex] = { ...semester, subjects: updatedSubjects };
+    setSemesters(newSemesters);
   };
 
   const handleSave = () => {
-    const newSemesters = [...semesters];
-    newSemesters[semesterIndex] = semester;
-    setSemesters(newSemesters);
     router.push('/');
   };
 
-  const currentSgpa = calculateSGPA(semester.subjects);
-  const currentCredits = semester.subjects.reduce((sum, s) => sum + s.credit, 0);
+  if (!semester) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading semester data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const sgpa = currentSgpa();
 
   return (
-    <main className="main-container">
-      <div className={styles.header}>
-        <button onClick={() => router.push('/')} className="btn">&larr; Back to Dashboard</button>
-        <h1>{semester.name}</h1>
-        <div className={styles.statsRow}>
-          <div className={`glass-card ${styles.statMini}`}>
-            <span>SGPA</span>
-            <strong>{currentSgpa.toFixed(2)}</strong>
-          </div>
-          <div className={`glass-card ${styles.statMini}`}>
-            <span>Credits</span>
-            <strong>{currentCredits.toFixed(1)}</strong>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/')}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Dashboard
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <GraduationCap className="h-6 w-6 text-primary" />
+                  {semester.name}
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Card className="py-2 px-4 bg-emerald-500/10 border-emerald-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">SGPA</p>
+                    <p className="text-2xl font-bold text-emerald-500">{sgpa.toFixed(2)}</p>
+                  </div>
+                  <div className="h-8 w-px bg-emerald-500/20"></div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Credits</p>
+                    <p className="text-2xl font-bold text-primary">{currentCredits.toFixed(1)}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className={styles.subjectsList}>
-        {semester.subjects.map((sub, index) => {
-          const totalMarks = getSubjectTotalMarks(sub);
-          const gradeInfo = getGradeInfo(totalMarks);
-          let displayGrade = gradeInfo.grade;
-          
-          if (sub.override && sub.directGradePoint) {
-            displayGrade = sub.directGradePoint + " (GP)";
-          }
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {subjects.map((subject) => (
+            <SubjectCalculator
+              key={subject.id}
+              subject={subject}
+              onUpdate={(updates) => updateSubject(subject.id, updates)}
+              onRemove={() => removeSubject(subject.id)}
+            />
+          ))}
+        </div>
 
-          return (
-            <div key={sub.id} className={`glass-card ${styles.subjectCard}`}>
-              <div className={styles.subjectHeader}>
-                <div className={styles.subjectTitleGroup}>
-                  <input 
-                    type="text" 
-                    value={sub.name} 
-                    onChange={e => updateSubject(sub.id, 'name', e.target.value)}
-                    className={styles.nameInput}
-                    placeholder="Subject Name"
-                  />
-                  <div className={styles.gradeBadge}>
-                    <span>{displayGrade}</span>
-                    <small>{totalMarks.toFixed(1)} Marks</small>
-                  </div>
-                </div>
-                <button onClick={() => removeSubject(sub.id)} className={styles.removeBtn}>&times;</button>
-              </div>
+        {/* Add Subject Button */}
+        <div className="mt-6">
+          <Button
+            variant="outline"
+            onClick={addSubject}
+            className="w-full py-6 border-dashed hover:border-solid hover:bg-primary/5"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add New Subject
+          </Button>
+        </div>
 
-              <div className={styles.subjectControls}>
-                <div className={styles.inputGroup}>
-                  <label>Credit</label>
-                  <input 
-                    type="number" 
-                    step="0.5" 
-                    value={sub.credit} 
-                    onChange={e => updateSubject(sub.id, 'credit', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>Type</label>
-                  <select 
-                    value={sub.type} 
-                    onChange={e => updateSubject(sub.id, 'type', e.target.value)}
-                  >
-                    <option value="theory">Theory</option>
-                    <option value="lab">Lab</option>
-                  </select>
-                </div>
-                <div className={styles.overrideToggle}>
-                  <label>
-                    <input 
-                      type="checkbox" 
-                      checked={sub.override} 
-                      onChange={e => updateSubject(sub.id, 'override', e.target.checked)}
-                    />
-                    Manual Override Marks/GP
-                  </label>
-                </div>
-              </div>
-
-              {!sub.override ? (
-                sub.type === 'theory' ? (
-                  <div className={styles.detailsGrid}>
-                    <div className={styles.detailSection}>
-                      <h4>Quizzes (15 marks avg)</h4>
-                      <div className={styles.quizRow}>
-                        <input type="number" placeholder="Q1" value={sub.theory.quiz1} onChange={e => updateTheory(sub.id, 'quiz1', e.target.value)} />
-                        <input type="number" placeholder="Q2" value={sub.theory.quiz2} onChange={e => updateTheory(sub.id, 'quiz2', e.target.value)} />
-                        <input type="number" placeholder="Q3" value={sub.theory.quiz3} onChange={e => updateTheory(sub.id, 'quiz3', e.target.value)} />
-                        <span>OR</span>
-                        <input type="number" placeholder="Avg" value={sub.theory.quizManualAvg} onChange={e => updateTheory(sub.id, 'quizManualAvg', e.target.value)} />
-                      </div>
-                    </div>
-                    
-                    <div className={styles.detailSection}>
-                      <h4>Exams</h4>
-                      <div className={styles.examRow}>
-                        <div className={styles.inputGroup}>
-                          <label>Midterm (25)</label>
-                          <input type="number" value={sub.theory.midterm} onChange={e => updateTheory(sub.id, 'midterm', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Final (40)</label>
-                          <input type="number" value={sub.theory.final} onChange={e => updateTheory(sub.id, 'final', e.target.value)} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className={styles.detailSection}>
-                      <h4>Continuous Assessment</h4>
-                      <div className={styles.caRow}>
-                        <div className={styles.inputGroup}>
-                          <label>Assign. (5)</label>
-                          <input type="number" value={sub.theory.assignment} onChange={e => updateTheory(sub.id, 'assignment', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Present. (8)</label>
-                          <input type="number" value={sub.theory.presentation} onChange={e => updateTheory(sub.id, 'presentation', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Attend. (7) OR %</label>
-                          <div className={styles.attendanceRow}>
-                            <input type="number" placeholder="/ 7" value={sub.theory.attendance} onChange={e => updateTheory(sub.id, 'attendance', e.target.value)} />
-                            <input type="number" placeholder="%" value={sub.theory.attendancePercent} onChange={e => updateTheory(sub.id, 'attendancePercent', e.target.value)} />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={styles.detailsGrid}>
-                    <div className={styles.detailSection}>
-                      <h4>Lab Components (Must sum to 100 max)</h4>
-                      <div className={styles.labRow}>
-                        <div className={styles.inputGroup}>
-                          <label>Attendance</label>
-                          <input type="number" placeholder="10" value={sub.lab.attendance} onChange={e => updateLab(sub.id, 'attendance', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Performance</label>
-                          <input type="number" placeholder="25" value={sub.lab.performance} onChange={e => updateLab(sub.id, 'performance', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Assign/Viva</label>
-                          <input type="number" placeholder="10" value={sub.lab.viva} onChange={e => updateLab(sub.id, 'viva', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Project</label>
-                          <input type="number" placeholder="25" value={sub.lab.project} onChange={e => updateLab(sub.id, 'project', e.target.value)} />
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Final</label>
-                          <input type="number" placeholder="30" value={sub.lab.final} onChange={e => updateLab(sub.id, 'final', e.target.value)} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <div className={styles.overrideBox}>
-                  <p>Override active. Enter direct marks or Grade Point below:</p>
-                  <div className={styles.overrideRow}>
-                    <div className={styles.inputGroup}>
-                      <label>Total Marks (0-100)</label>
-                      <input 
-                        type="number" 
-                        value={sub.totalMarks !== null ? sub.totalMarks : ''} 
-                        onChange={e => {
-                          updateSubject(sub.id, 'totalMarks', e.target.value ? parseFloat(e.target.value) : null);
-                          updateSubject(sub.id, 'directGradePoint', null);
-                        }} 
-                      />
-                    </div>
-                    <span>OR</span>
-                    <div className={styles.inputGroup}>
-                      <label>Direct Grade Point (0-4.0)</label>
-                      <input 
-                        type="number" 
-                        step="0.25"
-                        value={sub.directGradePoint !== null ? sub.directGradePoint : ''} 
-                        onChange={e => {
-                          updateSubject(sub.id, 'directGradePoint', e.target.value ? parseFloat(e.target.value) : null);
-                          updateSubject(sub.id, 'totalMarks', null);
-                        }} 
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        <button className={styles.addSubjectBtn} onClick={addSubject}>+ Add Subject</button>
+        {/* Save Button */}
+        <div className="flex justify-end mt-8 pt-6 border-t">
+          <Button
+            onClick={handleSave}
+            size="lg"
+            className="gap-2"
+          >
+            <Save className="h-4 w-4" />
+            Save Semester & Return to Dashboard
+          </Button>
+        </div>
       </div>
-
-      <div className={styles.pageFooter}>
-        <button className="btn btn-primary" onClick={handleSave}>Save Semester</button>
-      </div>
-    </main>
+    </div>
   );
 }
