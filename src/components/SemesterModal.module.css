@@ -1,0 +1,229 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: #1e293b;
+}
+
+.header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h2 {
+  font-size: 1.5rem;
+}
+
+.closeBtn {
+  font-size: 1.5rem;
+  color: #94a3b8;
+  transition: var(--transition);
+}
+
+.closeBtn:hover {
+  color: var(--foreground);
+}
+
+.modeToggle {
+  display: flex;
+  padding: 1rem 1.5rem;
+  gap: 1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.modeToggle button {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.activeMode {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--primary);
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+.inactiveMode {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border: 1px solid transparent !important;
+}
+
+.inactiveMode:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.quickEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputGroup label, .inputGroupSmall label {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.inputGroup input, .inputGroupSmall input, .inputGroupSmall select, .subjectNameInput, .overrideInputs input {
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--foreground);
+  transition: var(--transition);
+}
+
+.inputGroup input:focus, .inputGroupSmall input:focus, .inputGroupSmall select:focus, .subjectNameInput:focus, .overrideInputs input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.detailedEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.subjectCard {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.subjectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.subjectNameInput {
+  flex-grow: 1;
+  margin-right: 1rem;
+  font-weight: 500;
+}
+
+.removeSubBtn {
+  color: var(--danger);
+  font-size: 1.25rem;
+}
+
+.subjectRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.inputGroupSmall {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.overrideSection {
+  border-top: 1px dashed var(--card-border);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.overrideSection label {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.overrideInputs {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.overrideInputs input {
+  flex: 1;
+}
+
+.overrideInputs span {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.helpText {
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.addSubBtn {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed var(--card-border) !important;
+  color: var(--foreground);
+  border-radius: var(--radius);
+  transition: var(--transition);
+  margin-top: 0.5rem;
+}
+
+.addSubBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.cancelBtn {
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  color: #cbd5e1;
+  transition: var(--transition);
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
+}

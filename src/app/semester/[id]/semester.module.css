@@ -1,0 +1,241 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  color: var(--primary);
+}
+
+.statsRow {
+  display: flex;
+  gap: 1rem;
+}
+
+.statMini {
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius);
+}
+
+.statMini span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.statMini strong {
+  font-size: 1.25rem;
+  color: var(--foreground);
+}
+
+.subjectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.subjectCard {
+  padding: 1.5rem;
+}
+
+.subjectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 1rem;
+}
+
+.subjectTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-grow: 1;
+}
+
+.nameInput {
+  background: transparent;
+  border: 1px dashed transparent;
+  color: var(--foreground);
+  font-size: 1.5rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  width: 50%;
+  transition: var(--transition);
+}
+
+.nameInput:focus {
+  border-color: var(--primary);
+  outline: none;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.gradeBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+.gradeBadge span {
+  color: var(--success);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.gradeBadge small {
+  color: #94a3b8;
+  font-size: 0.7rem;
+}
+
+.removeBtn {
+  font-size: 1.5rem;
+  color: var(--danger);
+  opacity: 0.7;
+  transition: var(--transition);
+}
+
+.removeBtn:hover {
+  opacity: 1;
+}
+
+.subjectControls {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-end;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputGroup label {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.inputGroup input, .inputGroup select {
+  padding: 0.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--foreground);
+  width: 100%;
+}
+
+.inputGroup input:focus, .inputGroup select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.overrideToggle {
+  padding-bottom: 0.6rem;
+}
+
+.overrideToggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: #cbd5e1;
+}
+
+.detailsGrid {
+  display: grid;
+  gap: 1.5rem;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+}
+
+.detailSection h4 {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.25rem;
+}
+
+.quizRow, .examRow, .caRow, .labRow {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.quizRow input, .examRow input, .caRow input, .labRow input, .attendanceRow input {
+  padding: 0.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--foreground);
+  width: 80px;
+}
+
+.attendanceRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quizRow span {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.overrideBox {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+}
+
+.overrideBox p {
+  color: var(--warning);
+  margin-bottom: 1rem;
+}
+
+.overrideRow {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.overrideRow span {
+  color: #94a3b8;
+}
+
+.addSubjectBtn {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--card-border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+  transition: var(--transition);
+  font-weight: 500;
+}
+
+.addSubjectBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pageFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 2rem 0;
+  border-top: 1px solid var(--card-border);
+}
