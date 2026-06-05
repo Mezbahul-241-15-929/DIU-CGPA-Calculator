@@ -12,47 +12,77 @@ export function getGradeInfo(marks) {
 }
 
 export function getSubjectTotalMarks(subject) {
-  if (subject.override) {
-    return subject.totalMarks || 0;
+  // Check for override - support both old and new format
+  const isOverridden = subject.override || subject.overrideEnabled;
+  if (isOverridden) {
+    // New format uses overrideBy to determine if marks or GPA override
+    if (subject.overrideBy === 'marks' && subject.overrideMarks !== '' && subject.overrideMarks !== undefined) {
+      return parseFloat(subject.overrideMarks) || 0;
+    }
+    // Old format uses totalMarks
+    if (subject.totalMarks) {
+      return parseFloat(subject.totalMarks) || 0;
+    }
+    // New format GPA override - convert to marks equivalent
+    if (subject.overrideBy === 'gpa' && subject.overrideGPA !== '' && subject.overrideGPA !== undefined) {
+      const gpa = parseFloat(subject.overrideGPA) || 0;
+      return (gpa / 4) * 100;
+    }
+    // Old format directGradePoint override - convert to marks equivalent
+    if (subject.directGradePoint !== undefined && subject.directGradePoint !== null && subject.directGradePoint !== '') {
+      const gpa = parseFloat(subject.directGradePoint) || 0;
+      return (gpa / 4) * 100;
+    }
   }
 
   let total = 0;
   
-  if (subject.type === 'theory') {
-    // Theory Calculation
+  // Determine course type - support both old (type) and new (courseType) format
+  const courseType = subject.courseType || subject.type;
+  
+  if (courseType === 'theory') {
+    // Theory Calculation - support both new flat format and old nested format
     let quizMarks = 0;
-    if (subject.theory?.quizManualAvg !== undefined && subject.theory.quizManualAvg !== null && subject.theory.quizManualAvg !== '') {
+    
+    // New format: check for manual quiz average first
+    if (subject.theoryQuizManualAvg !== undefined && subject.theoryQuizManualAvg !== null && subject.theoryQuizManualAvg !== '') {
+      quizMarks = parseFloat(subject.theoryQuizManualAvg) || 0;
+    } else if (subject.theory?.quizManualAvg !== undefined && subject.theory.quizManualAvg !== null && subject.theory.quizManualAvg !== '') {
+      // Old nested format
       quizMarks = parseFloat(subject.theory.quizManualAvg) || 0;
     } else {
-      const q1 = parseFloat(subject.theory?.quiz1) || 0;
-      const q2 = parseFloat(subject.theory?.quiz2) || 0;
-      const q3 = parseFloat(subject.theory?.quiz3) || 0;
-      // Usually best 2 out of 3, but let's just take average of top 2 for now, or just average of all 3 if requested.
-      // The user didn't specify, so let's do best 2 out of 3 average, which is standard, or just sum of all / 3?
-      // "quize1,quize2,quize3 each 15mark & automatic avg calculate". Let's average all 3.
+      // Try new flat format first, then fall back to old nested format
+      const q1 = parseFloat(subject.quiz1 ?? subject.theory?.quiz1) || 0;
+      const q2 = parseFloat(subject.quiz2 ?? subject.theory?.quiz2) || 0;
+      const q3 = parseFloat(subject.quiz3 ?? subject.theory?.quiz3) || 0;
       quizMarks = (q1 + q2 + q3) / 3;
     }
 
-    const midterm = parseFloat(subject.theory?.midterm) || 0;
-    const final = parseFloat(subject.theory?.final) || 0;
-    const assignment = parseFloat(subject.theory?.assignment) || 0;
-    const presentation = parseFloat(subject.theory?.presentation) || 0;
+    // Midterm - support both formats
+    const midterm = parseFloat(subject.midTerm ?? subject.theory?.midterm) || 0;
+    // Final - support both formats
+    const final = parseFloat(subject.finalExam ?? subject.theory?.final) || 0;
+    // Assignment - support both formats
+    const assignment = parseFloat(subject.assignment ?? subject.theory?.assignment) || 0;
+    // Presentation - support both formats
+    const presentation = parseFloat(subject.presentation ?? subject.theory?.presentation) || 0;
     
     let attendance = 0;
     if (subject.theory?.attendancePercent) {
       attendance = ((parseFloat(subject.theory.attendancePercent) || 0) / 100) * 7;
     } else {
-      attendance = parseFloat(subject.theory?.attendance) || 0;
+      // New flat format
+      attendance = parseFloat(subject.attendance ?? subject.theory?.attendance) || 0;
     }
 
     total = quizMarks + midterm + final + assignment + presentation + attendance;
-  } else if (subject.type === 'lab') {
-    // Lab Calculation
-    total = (parseFloat(subject.lab?.attendance) || 0) +
-            (parseFloat(subject.lab?.performance) || 0) +
-            (parseFloat(subject.lab?.viva) || 0) +
-            (parseFloat(subject.lab?.project) || 0) +
-            (parseFloat(subject.lab?.final) || 0);
+  } else if (courseType === 'lab') {
+    // Lab Calculation - support both new flat format and old nested format
+    total = (parseFloat(subject.labAttendance ?? subject.lab?.attendance) || 0) +
+            (parseFloat(subject.performance ?? subject.lab?.performance) || 0) +
+            (parseFloat(subject.viva ?? subject.lab?.viva) || 0) +
+            (parseFloat(subject.project ?? subject.lab?.project) || 0) +
+            (parseFloat(subject.labFinal ?? subject.lab?.final) || 0);
   }
 
   return Math.min(100, Math.max(0, total));
